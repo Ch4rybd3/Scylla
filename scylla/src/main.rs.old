@@ -1,0 +1,29 @@
+use axum::{routing::get, Router};
+use std::net::SocketAddr;
+use axum_server::tls_rustls::RustlsConfig;
+
+#[tokio::main]
+async fn main() {
+    // Charge the TLS config from PEM files
+    let tls_config = RustlsConfig::from_pem_file("cert.pem", "key.pem")
+        .await
+        .expect("The key or cert file was not found or is invalid");
+
+    // Created the app with a single route on "/"
+    let app = Router::new().route("/", get(root_handler));
+
+    // Using the port 8443 for prepro, will switch to 443 later
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8443));
+    println!("Scylla is started on https://{}", addr);
+
+    // Start the HTTP server with the configured TLS
+    axum_server::bind_rustls(addr, tls_config)
+        .serve(app.into_make_service())
+        .await
+        .expect("The server as not started correctly");
+}
+
+// Handler for the route "/"
+async fn root_handler() -> &'static str {
+    "Hello World, Scylla is here!"
+}
